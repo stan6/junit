@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.experimental.theories.CopyStrategy;
 import org.junit.experimental.theories.ParameterSignature;
 import org.junit.experimental.theories.ParameterSupplier;
 import org.junit.experimental.theories.ParametersSuppliedBy;
@@ -129,5 +130,35 @@ public class Assignments {
 			values[i]= fAssigned.get(i).getDescription();
 		}
 		return values;
+	}
+	
+	/**
+	 * Getter function for the CopyStrategy classes amassed by DataPoint or 
+	 * DataPoints
+	 * 
+	 * @return collection of CopyStrategy classes to be applied to DataPoint 
+	 *         or DataPoints
+	 */
+	@SuppressWarnings("unchecked")
+	public Class<CopyStrategy>[] getCopyStrategies() {
+		Class[] copyStrategies= new Class[fAssigned.size()];
+		for (int i= 0; i < copyStrategies.length; i++) {
+			copyStrategies[i]= fAssigned.get(i).getCopyStrategy();
+		}
+		return copyStrategies;
+	}
+	
+	/**
+	 * Getter function for the argument that has failed at this particular index
+	 * 
+	 * @param failedIndex the particular index that points to the DataPoint 
+	 *        that has failed	
+	 * @return argument description of the DataPoint(s) pointing at this 
+	 *         particular index
+	 * @throws CouldNotGenerateValueException If the value could not be generated
+	 */
+	public String getArgumentString(int failedIndex) 
+			throws CouldNotGenerateValueException {	
+		return fAssigned.get(failedIndex).getDescription();
 	}
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.junit.experimental.theories.CopyStrategy;
 import org.junit.experimental.theories.PotentialAssignment;
 import org.junit.internal.AssumptionViolatedException;
 
@@ -28,6 +29,11 @@ public class GuesserQueue extends ArrayList<ReguessableValue> {
 		@Override
 		public String getDescription() throws CouldNotGenerateValueException {
 			return delegate.getDescription();
+		}
+
+		@Override
+		public Class<? extends CopyStrategy> getCopyStrategy() {
+			return CopyStrategy.class;
 		}
 	}
 

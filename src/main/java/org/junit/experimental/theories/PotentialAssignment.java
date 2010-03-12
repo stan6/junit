@@ -5,7 +5,8 @@ public abstract class PotentialAssignment {
 		private static final long serialVersionUID= 1L;
 	}
 	
-	public static PotentialAssignment forValue(final String name, final Object value) {
+	public static PotentialAssignment forValue(final String name, final Object value,
+			final Class<? extends CopyStrategy>  copyStrategy) {
 		return new PotentialAssignment() {		
 			@Override
 			public Object getValue() throws CouldNotGenerateValueException {
@@ -22,14 +23,21 @@ public abstract class PotentialAssignment {
 					throws CouldNotGenerateValueException {
 				return name;
 			}
+			
+			@Override
+			public Class<? extends CopyStrategy> getCopyStrategy() {
+				return copyStrategy;
+			}
 		};
 	}
 	
 	public static PotentialAssignment forValue(final Object value) {
-		return forValue(value.toString(), value);
+		return forValue(value.toString(), value, CopyStrategy.class);
 	}
 	
 	public abstract Object getValue() throws CouldNotGenerateValueException;
 	
 	public abstract String getDescription() throws CouldNotGenerateValueException;
+	
+	public abstract Class<? extends CopyStrategy> getCopyStrategy();
 }

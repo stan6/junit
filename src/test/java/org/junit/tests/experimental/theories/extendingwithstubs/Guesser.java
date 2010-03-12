@@ -11,6 +11,7 @@ import java.util.Map.Entry;
 
 import org.hamcrest.BaseDescription;
 import org.hamcrest.Description;
+import org.junit.experimental.theories.CopyStrategy;
 import org.junit.internal.AssumptionViolatedException;
 
 public class Guesser<T> extends ReguessableValue {
@@ -117,6 +118,11 @@ public class Guesser<T> extends ReguessableValue {
 	@Override
 	public String getDescription() throws CouldNotGenerateValueException {
 		return "guesser[" + type + "]";
+	}
+
+	@Override
+	public Class<? extends CopyStrategy> getCopyStrategy() {
+		return CopyStrategy.class;
 	}
 
 }

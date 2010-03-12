@@ -16,7 +16,7 @@ public class TestedOnSupplier extends ParameterSupplier {
 		TestedOn testedOn = sig.getAnnotation(TestedOn.class);
 		int[] ints = testedOn.ints();
 		for (final int i : ints) {
-			list.add(PotentialAssignment.forValue(Arrays.asList(ints).toString(), i));
+			list.add(PotentialAssignment.forValue(Arrays.asList(ints).toString(), i, null));
 		}
 		return list;
 	}

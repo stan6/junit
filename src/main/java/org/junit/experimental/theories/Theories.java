@@ -12,6 +12,7 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.experimental.theories.PotentialAssignment.CouldNotGenerateValueException;
 import org.junit.experimental.theories.internal.Assignments;
+import org.junit.experimental.theories.internal.CopyStrategyFailureException;
 import org.junit.experimental.theories.internal.ParameterizedAssertionError;
 import org.junit.internal.AssumptionViolatedException;
 import org.junit.runners.BlockJUnit4ClassRunner;
@@ -128,8 +129,12 @@ public class Theories extends BlockJUnit4ClassRunner {
 								handleDataPointSuccess();
 							} catch (AssumptionViolatedException e) {
 								handleAssumptionViolation(e);
+							} catch (CopyStrategyFailureException e) {
+								reportParameterizedError(e, 
+										complete.getArgumentString(e.getFailedIndex()), 
+										complete.getArgumentStrings(nullsOk()));
 							} catch (Throwable e) {
-								reportParameterizedError(e, complete
+								reportParameterizedError(e, null, complete
 										.getArgumentStrings(nullsOk()));
 							}
 						}
@@ -158,22 +163,82 @@ public class Theories extends BlockJUnit4ClassRunner {
 					try {
 						final Object[] values= complete.getMethodArguments(
 								nullsOk());
-						method.invokeExplosively(freshInstance, values);
+						method.invokeExplosively(freshInstance, toBeInvoked(values, complete.getCopyStrategies()));
 					} catch (CouldNotGenerateValueException e) {
 						// ignore
 					}
 				}
 			};
 		}
+		
+		/**
+		 * Using the passed in array of CopyStrategy classes, the method 
+		 * replicates the matching value if it is replicable.
+		 * 
+		 * @param values DataPoint(s) values to be replicated
+		 * @param copyStrategies array of CopyStrategy classes to be applied to passed in DataPoint(s)
+		 * @return array of newly copied objects using passed in CopyStrategies
+		 */
+		protected Object[] toBeInvoked(Object[] values,	Class<CopyStrategy>[] copyStrategies) {	
+			Object[] toBeInvoked= new Object[values.length];											
+			for (int i= 0; i < values.length; i++) {
+				if (isPrimitive(values[i]) || 
+						copyStrategies[i] == CopyStrategy.class|| values[i] == null) {
+					toBeInvoked[i]= values[i];
+				} else {
+					toBeInvoked[i]= getCopyStrategyInvokedObject(values[i], 
+							copyStrategies[i], i);
+				}	
+			}
+			return toBeInvoked;
+		}
+		
+		/**
+		 * The method creates a new object using the provided CopyStrategy.
+		 * 
+		 * @param value the actual DataPoint to be applied using CopyStrategy
+		 * @param copyStrategy user provided copy constructor to replicate the 
+		 *        provided DataPoint
+		 * @param index index provided to point out which DataPoint has failed 
+		 *        in the case of failure
+		 * @return newly created object using provided CopyStrategy
+		 * @throws CopyStrategyFailureException the object could not be 
+		 *         successfully replicated by using given means
+		 */
+		protected Object getCopyStrategyInvokedObject(Object value,
+				Class<? extends CopyStrategy> copyStrategy, int index) throws CopyStrategyFailureException {
+			try {
+				return copyStrategy.newInstance().copyDataPoint(value);
+			} catch (Exception e) {
+				throw new CopyStrategyFailureException(value, index, copyStrategy.getSimpleName());
+			}
+		}
+				
+		/**
+		 * Checks if the current DataPoint object is a primitive.
+		 * 
+		 * @param value the DataPoint value to be checked
+		 * @return true if the DataPoint is primitive, false otherwise
+		 */
+		protected boolean isPrimitive(Object value) {
+			return value instanceof Number 
+				|| value instanceof Boolean 
+				|| value instanceof String 
+				|| value instanceof Character;
+		}
 
 		protected void handleAssumptionViolation(AssumptionViolatedException e) {
 			fInvalidParameters.add(e);
 		}
 
-		protected void reportParameterizedError(Throwable e, Object... params)
+		protected void reportParameterizedError(Throwable e, String param, Object... params)
 				throws Throwable {
 			if (params.length == 0)
 				throw e;
+			if(e instanceof CopyStrategyFailureException) {		
+				throw new ParameterizedAssertionError((CopyStrategyFailureException) e, fTestMethod.getName(), param,
+						params);
+			}
 			throw new ParameterizedAssertionError(e, fTestMethod.getName(),
 					params);
 		}

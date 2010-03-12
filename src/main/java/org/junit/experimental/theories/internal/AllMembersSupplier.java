@@ -9,6 +9,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.experimental.theories.CopyStrategy;
 import org.junit.experimental.theories.DataPoint;
 import org.junit.experimental.theories.DataPoints;
 import org.junit.experimental.theories.ParameterSignature;
@@ -23,9 +24,13 @@ import org.junit.runners.model.TestClass;
 public class AllMembersSupplier extends ParameterSupplier {
 	static class MethodParameterValue extends PotentialAssignment {
 		private final FrameworkMethod fMethod;
+		
+		private Class<? extends CopyStrategy> copyStrategy;
 
-		private MethodParameterValue(FrameworkMethod dataPointMethod) {
+		private MethodParameterValue(FrameworkMethod dataPointMethod,  
+				Class<? extends CopyStrategy> toBeCopied) {
 			fMethod= dataPointMethod;
+			copyStrategy= toBeCopied;
 		}
 
 		@Override
@@ -47,6 +52,11 @@ public class AllMembersSupplier extends ParameterSupplier {
 		@Override
 		public String getDescription() throws CouldNotGenerateValueException {
 			return fMethod.getName();
+		}
+		
+		@Override
+		public Class<? extends CopyStrategy> getCopyStrategy() {
+			return copyStrategy;
 		}
 	}
 
@@ -74,7 +84,8 @@ public class AllMembersSupplier extends ParameterSupplier {
 		for (FrameworkMethod dataPointsMethod : fClass
 				.getAnnotatedMethods(DataPoints.class))
 			try {
-				addArrayValues(dataPointsMethod.getName(), list, dataPointsMethod.invokeExplosively(null));
+				addArrayValues(dataPointsMethod.getName(), list, dataPointsMethod.invokeExplosively(null), 
+						dataPointsMethod.getAnnotation(DataPoints.class).copyStrategy());
 			} catch (Throwable e) {
 				// ignore and move on
 			}
@@ -86,7 +97,8 @@ public class AllMembersSupplier extends ParameterSupplier {
 				.getAnnotatedMethods(DataPoint.class)) {
 			Class<?> type= sig.getType();
 			if ((dataPointMethod.producesType(type)))
-				list.add(new MethodParameterValue(dataPointMethod));
+				list.add(new MethodParameterValue(dataPointMethod,  
+						dataPointMethod.getAnnotation(DataPoint.class).copyStrategy()));
 		}
 	}
 
@@ -97,19 +109,22 @@ public class AllMembersSupplier extends ParameterSupplier {
 				Class<?> type= field.getType();
 				if (sig.canAcceptArrayType(type)
 						&& field.getAnnotation(DataPoints.class) != null) {
-					addArrayValues(field.getName(), list, getStaticFieldValue(field));
+					addArrayValues(field.getName(), list, getStaticFieldValue(field), 
+							field.getAnnotation(DataPoints.class).copyStrategy());
 				} else if (sig.canAcceptType(type)
 						&& field.getAnnotation(DataPoint.class) != null) {
 					list.add(PotentialAssignment
-							.forValue(field.getName(), getStaticFieldValue(field)));
+							.forValue(field.getName(), getStaticFieldValue(field), 
+									field.getAnnotation(DataPoint.class).copyStrategy()));
 				}
 			}
 		}
 	}
 
-	private void addArrayValues(String name, List<PotentialAssignment> list, Object array) {
+	private void addArrayValues(String name, List<PotentialAssignment> list, Object array,
+			Class<? extends CopyStrategy> copyStrategy) {
 		for (int i= 0; i < Array.getLength(array); i++)
-			list.add(PotentialAssignment.forValue(name + "[" + i + "]", Array.get(array, i)));
+			list.add(PotentialAssignment.forValue(name + "[" + i + "]", Array.get(array, i), copyStrategy));
 	}
 
 	private Object getStaticFieldValue(final Field field) {
